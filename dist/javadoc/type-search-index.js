@@ -1,0 +1,1 @@
+typeSearchIndex = [{"l":"All Classes and Interfaces","u":"allclasses-index.html"},{"p":"arquivo","l":"Arquivo"},{"p":"arquivo","l":"CopyFiles"},{"p":"arquivo","l":"ExtensaoArquivo"},{"p":"arquivo","l":"JArquivo"}];updateSearchResults();

@@ -11,7 +11,6 @@ import java.util.Enumeration;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.activation.MimetypesFileTypeMap;
 
 /**
  *
@@ -47,16 +46,6 @@ public class Arquivo {
     }
 
     /**
-     * Recebe-se um arquivo (tipo file) e retorna-se uma string com o tipo do arquivo passado por parâmetro
-     * 
-     * @param file File - arquivo que terá seu tipo validado
-     * @return String - tipo do arquivo
-     */
-    public String MimeTypeFile(File file) {
-        return new MimetypesFileTypeMap().getContentType(file);
-    }
-
-    /**
      * Ler o arquivo especificado no caminho indicado pelo parâmetro de entrada
      * 
      * @param arq indica onde está o arquivo que deverá ser lido
@@ -67,10 +56,11 @@ public class Arquivo {
     public String ler(String arq) throws FileNotFoundException, IOException {
         String file = "";
         FileReader fr = new FileReader(arq);
-        BufferedReader br = new BufferedReader(fr);
-        while (br.ready()) {
-            file += br.readLine() + '\n';
-        }
+        try (BufferedReader br = new BufferedReader(fr)) {
+			while (br.ready()) {
+			    file += br.readLine() + '\n';
+			}
+		}
         return file;
     }
 
@@ -131,7 +121,7 @@ public class Arquivo {
      */
     public Properties alterPropertyFile(Properties p) {
         Properties newP = new Properties();
-        Enumeration enP = p.propertyNames();
+        Enumeration<?> enP = p.propertyNames();
         String key;
 
         while (enP.hasMoreElements()) {
@@ -158,13 +148,14 @@ public class Arquivo {
      * @throws IOException 
      */
     public void bloquear(File file, String permissoes) throws FileNotFoundException, IOException {
-        //recupera o canal do arquivo
-        FileChannel channel = new RandomAccessFile(file, permissoes).getChannel();
-
-        //usa o canal do arquivo para tentar criar uma trava para este, caso ainda este não possua nenhuma
-        FileLock lock = channel.lock(0, Long.MAX_VALUE, true);
-        //tenta adiquirir o bloqueio do arquivo caso este já esteja bloqueado
-        lock = channel.tryLock(0, Long.MAX_VALUE, true);
+        try (RandomAccessFile accessFile = new RandomAccessFile(file, permissoes)) {
+			try (FileChannel channel = accessFile.getChannel()) {
+				try (FileLock lock = channel.lock(0, Long.MAX_VALUE, true)) {
+					channel.tryLock(0, Long.MAX_VALUE, true);
+				}
+			} finally {
+			}
+		}
     }
 
     /**
@@ -189,8 +180,14 @@ public class Arquivo {
      * @throws FileNotFoundException 
      */
     public boolean isOpenFile(File file) throws FileNotFoundException {
-        FileChannel channel = new RandomAccessFile(file, null).getChannel();
-        return channel.isOpen();
+        try (FileChannel channel = new RandomAccessFile(file, null).getChannel()) {
+			return channel.isOpen();
+		} catch (FileNotFoundException e) {
+			throw e;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
     }
 
     /**
@@ -202,8 +199,13 @@ public class Arquivo {
      * @throws IOException 
      */
     public boolean isSharedFile(File file) throws FileNotFoundException, IOException {
-        FileChannel channel = new RandomAccessFile(file, null).getChannel();
-        FileLock lock = channel.lock();
-        return lock.isShared();
+    	boolean r = false;
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, null)) {
+			try (FileChannel channel = randomAccessFile.getChannel()) {
+				FileLock lock = channel.lock();
+				r = lock.isShared();
+			}
+		}
+		return r;
     }
 }

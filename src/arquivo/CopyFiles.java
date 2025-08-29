@@ -31,10 +31,12 @@ public class CopyFiles {
         FileChannel sourceChannel = null;
         FileChannel destinationChannel = null;
 
-        try {
-            sourceChannel = new FileInputStream(source).getChannel();
-            destinationChannel = new FileOutputStream(destination).getChannel();
-            sourceChannel.transferTo(0, sourceChannel.size(),
+        try (FileInputStream fileInputStream = new FileInputStream(source)) {
+            sourceChannel = fileInputStream.getChannel();
+            try (FileOutputStream fileOutputStream = new FileOutputStream(destination)) {
+				destinationChannel = fileOutputStream.getChannel();
+			}
+			sourceChannel.transferTo(0, sourceChannel.size(),
                     destinationChannel);
         } finally {
             if (sourceChannel != null && sourceChannel.isOpen()) {
